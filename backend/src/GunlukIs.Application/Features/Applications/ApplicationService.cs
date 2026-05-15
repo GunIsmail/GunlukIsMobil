@@ -32,6 +32,8 @@ public class ApplicationService : IApplicationService
             return Result.Failure<ApplicationResponse>("İlan mevcut değil.", 404);
         if (job.EmployerId == workerId)
             return Result.Failure<ApplicationResponse>("Kendi ilanınıza başvuramazsınız.", 400);
+        if (job.Quota > 0 && job.ApplicantCount >= job.Quota)
+            return Result.Failure<ApplicationResponse>("Bu ilan için kontenjan dolmuştur.", 400);
 
         var duplicate = await _unitOfWork.Applications.AnyAsync(
             a => a.JobAdvertisementId == request.JobAdvertisementId && a.WorkerId == workerId,
@@ -41,6 +43,10 @@ public class ApplicationService : IApplicationService
 
         var application = new DomainApplication(request.JobAdvertisementId, workerId, request.Message?.Trim());
         await _unitOfWork.Applications.AddAsync(application, cancellationToken);
+        
+        job.IncrementApplicantCount();
+        _unitOfWork.Jobs.Update(job);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success(await LoadResponseAsync(application.Id, cancellationToken), 201);
@@ -152,6 +158,7 @@ public class ApplicationService : IApplicationService
         a.Id,
         a.JobAdvertisementId,
         a.JobAdvertisement.Title,
+        a.JobAdvertisement.JobDate,
         a.WorkerId,
         a.Worker.FullName,
         a.Worker.PhoneNumber,

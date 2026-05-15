@@ -11,11 +11,13 @@ public class JobsController : ApiControllerBase
 {
     private readonly IJobService _jobService;
     private readonly IValidator<CreateJobRequest> _createValidator;
+    private readonly IValidator<UpdateJobRequest> _updateValidator;
 
-    public JobsController(IJobService jobService, IValidator<CreateJobRequest> createValidator)
+    public JobsController(IJobService jobService, IValidator<CreateJobRequest> createValidator, IValidator<UpdateJobRequest> updateValidator)
     {
         _jobService = jobService;
         _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     [AllowAnonymous]
@@ -44,4 +46,17 @@ public class JobsController : ApiControllerBase
         await _createValidator.ValidateAndThrowAsync(request, cancellationToken);
         return ToActionResult(await _jobService.CreateAsync(request, cancellationToken));
     }
+
+    [Authorize]
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateJobRequest request, CancellationToken cancellationToken)
+    {
+        await _updateValidator.ValidateAndThrowAsync(request, cancellationToken);
+        return ToActionResult(await _jobService.UpdateAsync(id, request, cancellationToken));
+    }
+
+    [Authorize]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken) =>
+        ToActionResult(await _jobService.DeactivateAsync(id, cancellationToken));
 }

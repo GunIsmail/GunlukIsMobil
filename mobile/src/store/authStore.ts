@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { tokenStorage } from '@/services/tokenStorage';
-import type { AuthResponse } from '@/types/models';
+import type { AuthResponse, ProfileInfo } from '@/types/models';
 
 interface AuthState {
   user: AuthResponse | null;
@@ -8,9 +8,10 @@ interface AuthState {
   hydrate: () => Promise<void>;
   signIn: (auth: AuthResponse) => Promise<void>;
   signOut: () => Promise<void>;
+  patchProfile: (info: ProfileInfo) => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isHydrated: false,
   hydrate: async () => {
@@ -25,5 +26,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await tokenStorage.clear();
     set({ user: null });
+  },
+  patchProfile: async (info) => {
+    const current = get().user;
+    if (!current) return;
+    const updated: AuthResponse = { ...current, fullName: info.fullName, email: info.email };
+    await tokenStorage.setUser(JSON.stringify(updated));
+    set({ user: updated });
   },
 }));

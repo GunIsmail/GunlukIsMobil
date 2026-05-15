@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { JobCard } from '@/components/JobCard';
@@ -45,13 +46,17 @@ export const JobFeedScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, [filter]);
 
-  useEffect(() => {
-    loadDistricts();
-  }, [loadDistricts]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDistricts();
+    }, [loadDistricts])
+  );
 
-  useEffect(() => {
-    loadJobs();
-  }, [loadJobs]);
+  useFocusEffect(
+    useCallback(() => {
+      loadJobs();
+    }, [loadJobs])
+  );
 
   const applyFilters = () => {
     setFilter({

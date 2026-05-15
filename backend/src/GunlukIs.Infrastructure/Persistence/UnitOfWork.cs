@@ -13,6 +13,8 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<JobAdvertisement> Jobs { get; }
     public IGenericRepository<DomainApplication> Applications { get; }
     public IGenericRepository<ChatMessage> ChatMessages { get; }
+    public IGenericRepository<WorkerRating> WorkerRatings { get; }
+    public IGenericRepository<EmployerRating> EmployerRatings { get; }
 
     public UnitOfWork(AppDbContext context)
     {
@@ -21,6 +23,8 @@ public class UnitOfWork : IUnitOfWork
         Jobs = new GenericRepository<JobAdvertisement>(context);
         Applications = new GenericRepository<DomainApplication>(context);
         ChatMessages = new GenericRepository<ChatMessage>(context);
+        WorkerRatings = new GenericRepository<WorkerRating>(context);
+        EmployerRatings = new GenericRepository<EmployerRating>(context);
     }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>

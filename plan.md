@@ -4,7 +4,7 @@ This document serves as the master blueprint for the application's architecture 
 
 ---
 
-## 🏗 1. Tech Stack
+##  1. Tech Stack
 
 *   **Backend:** .NET 10 Web API
     *   **Architecture:** Onion Architecture (Domain, Application, Infrastructure, WebAPI layers)

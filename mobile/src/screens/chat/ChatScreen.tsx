@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Button } from '@/components/Button';
 import { chatApi } from '@/api/chatApi';
 import { createChatHub } from '@/services/chatHub';
@@ -11,9 +13,10 @@ import type { ChatMessage } from '@/types/models';
 
 interface Props {
   route: { params: { applicationId: string; jobTitle: string } };
+  navigation: { goBack: () => void };
 }
 
-export const ChatScreen: React.FC<Props> = ({ route }) => {
+export const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
   const { applicationId, jobTitle } = route.params;
   const user = useAuthStore((s) => s.user);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -21,6 +24,7 @@ export const ChatScreen: React.FC<Props> = ({ route }) => {
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const hub = useMemo(() => createChatHub(), []);
+  const headerHeight = useHeaderHeight();
 
   const handleIncoming = useCallback((message: ChatMessage) => {
     setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
@@ -67,14 +71,11 @@ export const ChatScreen: React.FC<Props> = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{jobTitle}</Text>
-      </View>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={80}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={headerHeight}
       >
         <FlatList
           ref={listRef}
@@ -112,14 +113,6 @@ export const ChatScreen: React.FC<Props> = ({ route }) => {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
   list: { padding: 16, paddingBottom: 24 },
   bubble: { maxWidth: '80%', padding: 12, borderRadius: 14, marginBottom: 8 },
   bubbleMine: { backgroundColor: colors.primary, alignSelf: 'flex-end', borderBottomRightRadius: 4 },

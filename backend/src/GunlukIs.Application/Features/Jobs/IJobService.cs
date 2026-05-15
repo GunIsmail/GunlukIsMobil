@@ -9,5 +9,7 @@ public interface IJobService
     Task<Result<IReadOnlyList<JobResponse>>> ListAsync(JobFilterRequest filter, CancellationToken cancellationToken = default);
     Task<Result<JobResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<JobResponse>>> ListMineAsync(CancellationToken cancellationToken = default);
+    Task<Result<JobResponse>> UpdateAsync(Guid id, UpdateJobRequest request, CancellationToken cancellationToken = default);
+    Task<Result> DeactivateAsync(Guid id, CancellationToken cancellationToken = default);
     IReadOnlyList<string> GetDistricts();
 }

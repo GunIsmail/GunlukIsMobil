@@ -17,6 +17,8 @@ public class User : BaseEntity
 
     public ICollection<JobAdvertisement> CreatedJobs { get; private set; } = new List<JobAdvertisement>();
     public ICollection<Application> Applications { get; private set; } = new List<Application>();
+    public ICollection<WorkerRating> WorkerRatingsReceived { get; private set; } = new List<WorkerRating>();
+    public ICollection<EmployerRating> EmployerRatingsReceived { get; private set; } = new List<EmployerRating>();
 
     private User() { }
 
@@ -38,6 +40,14 @@ public class User : BaseEntity
     public void MarkPhoneVerified()
     {
         IsPhoneVerified = true;
+        SetUpdated();
+    }
+
+    public void UpdateProfile(string fullName, string email, string phoneNumber)
+    {
+        FullName = fullName;
+        Email = email;
+        PhoneNumber = phoneNumber;
         SetUpdated();
     }
 

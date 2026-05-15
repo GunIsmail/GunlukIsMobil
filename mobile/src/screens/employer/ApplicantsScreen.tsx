@@ -1,16 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { applicationsApi } from '@/api/applicationsApi';
+import { jobsApi } from '@/api/jobsApi';
 import { extractError } from '@/api/http';
 import { colors } from '@/theme/colors';
-import type { ApplicationStatus, JobApplication } from '@/types/models';
+import type { ApplicationStatus, JobApplication, JobAdvertisement } from '@/types/models';
 
 interface Props {
-  route: { params: { jobId: string; title: string } };
-  navigation: { navigate: (s: string, params?: object) => void };
+  route: { params: { job: JobAdvertisement } };
+  navigation: { navigate: (s: string, params?: object) => void; goBack: () => void };
 }
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -21,7 +23,9 @@ const statusLabels: Record<ApplicationStatus, string> = {
 };
 
 export const ApplicantsScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { jobId, title } = route.params;
+  const { job } = route.params;
+  const jobId = job.id;
+  const title = job.title;
   const [items, setItems] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,9 +40,11 @@ export const ApplicantsScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   }, [jobId]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const update = async (id: string, action: 'accept' | 'reject') => {
     try {
@@ -51,10 +57,46 @@ export const ApplicantsScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   };
 
+  const handleDeactivate = () => {
+    Alert.alert('Emin misiniz?', 'Bu ilanı yayından kaldırmak istediğinize emin misiniz?', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Kaldır',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await jobsApi.deactivate(jobId);
+            Alert.alert('Kaldırıldı', 'İlan yayından kaldırıldı.', [{ text: 'Tamam', onPress: navigation.goBack }]);
+          } catch (err) {
+            Alert.alert('Hata', extractError(err));
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <Screen scrollable={false}>
-      <Text style={styles.title}>Başvuranlar</Text>
       <Text style={styles.subtitle}>{title}</Text>
+
+      <View style={styles.jobActionsRow}>
+        <View style={{ flex: 1 }}>
+          <Button 
+            title="Düzenle" 
+            variant="secondary" 
+            onPress={() => navigation.navigate('CreateJob', { job })} 
+          />
+        </View>
+        <View style={{ width: 8 }} />
+        <View style={{ flex: 1 }}>
+          <Button 
+            title="İlandan Kaldır" 
+            variant="danger" 
+            onPress={handleDeactivate} 
+          />
+        </View>
+      </View>
+
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
@@ -100,5 +142,6 @@ const styles = StyleSheet.create({
   message: { marginTop: 8, color: colors.text, fontStyle: 'italic' },
   status: { marginTop: 8, color: colors.textMuted, fontSize: 13 },
   actionsRow: { flexDirection: 'row', marginTop: 12 },
+  jobActionsRow: { flexDirection: 'row', marginBottom: 16 },
   empty: { textAlign: 'center', color: colors.textMuted, marginTop: 24 },
 });

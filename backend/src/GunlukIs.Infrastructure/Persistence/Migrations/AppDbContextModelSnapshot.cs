@@ -96,6 +96,52 @@ namespace GunlukIs.Infrastructure.Persistence.Migrations
                     b.ToTable("chat_messages", (string)null);
                 });
 
+            modelBuilder.Entity("GunlukIs.Domain.Entities.EmployerRating", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EmployerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ManagementStyle")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PaymentReliability")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RaterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("WorkingConditions")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("EmployerId");
+
+                    b.HasIndex("RaterId");
+
+                    b.ToTable("employer_ratings", (string)null);
+                });
+
             modelBuilder.Entity("GunlukIs.Domain.Entities.JobAdvertisement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -106,6 +152,9 @@ namespace GunlukIs.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<int>("ApplicantCount")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -140,6 +189,9 @@ namespace GunlukIs.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("ProvidesTransport")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("Quota")
+                        .HasColumnType("integer");
 
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("interval");
@@ -224,6 +276,52 @@ namespace GunlukIs.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("GunlukIs.Domain.Entities.WorkerRating", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Communication")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RaterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ServiceSpeed")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Teamwork")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("RaterId");
+
+                    b.HasIndex("WorkerId");
+
+                    b.ToTable("worker_ratings", (string)null);
+                });
+
             modelBuilder.Entity("GunlukIs.Domain.Entities.Application", b =>
                 {
                     b.HasOne("GunlukIs.Domain.Entities.JobAdvertisement", "JobAdvertisement")
@@ -262,6 +360,33 @@ namespace GunlukIs.Infrastructure.Persistence.Migrations
                     b.Navigation("Sender");
                 });
 
+            modelBuilder.Entity("GunlukIs.Domain.Entities.EmployerRating", b =>
+                {
+                    b.HasOne("GunlukIs.Domain.Entities.Application", "Application")
+                        .WithOne("EmployerRating")
+                        .HasForeignKey("GunlukIs.Domain.Entities.EmployerRating", "ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GunlukIs.Domain.Entities.User", "Employer")
+                        .WithMany("EmployerRatingsReceived")
+                        .HasForeignKey("EmployerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GunlukIs.Domain.Entities.User", "Rater")
+                        .WithMany()
+                        .HasForeignKey("RaterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+
+                    b.Navigation("Employer");
+
+                    b.Navigation("Rater");
+                });
+
             modelBuilder.Entity("GunlukIs.Domain.Entities.JobAdvertisement", b =>
                 {
                     b.HasOne("GunlukIs.Domain.Entities.User", "Employer")
@@ -273,9 +398,40 @@ namespace GunlukIs.Infrastructure.Persistence.Migrations
                     b.Navigation("Employer");
                 });
 
+            modelBuilder.Entity("GunlukIs.Domain.Entities.WorkerRating", b =>
+                {
+                    b.HasOne("GunlukIs.Domain.Entities.Application", "Application")
+                        .WithOne("WorkerRating")
+                        .HasForeignKey("GunlukIs.Domain.Entities.WorkerRating", "ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GunlukIs.Domain.Entities.User", "Rater")
+                        .WithMany()
+                        .HasForeignKey("RaterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GunlukIs.Domain.Entities.User", "Worker")
+                        .WithMany("WorkerRatingsReceived")
+                        .HasForeignKey("WorkerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+
+                    b.Navigation("Rater");
+
+                    b.Navigation("Worker");
+                });
+
             modelBuilder.Entity("GunlukIs.Domain.Entities.Application", b =>
                 {
                     b.Navigation("ChatMessages");
+
+                    b.Navigation("EmployerRating");
+
+                    b.Navigation("WorkerRating");
                 });
 
             modelBuilder.Entity("GunlukIs.Domain.Entities.JobAdvertisement", b =>
@@ -288,6 +444,10 @@ namespace GunlukIs.Infrastructure.Persistence.Migrations
                     b.Navigation("Applications");
 
                     b.Navigation("CreatedJobs");
+
+                    b.Navigation("EmployerRatingsReceived");
+
+                    b.Navigation("WorkerRatingsReceived");
                 });
 #pragma warning restore 612, 618
         }

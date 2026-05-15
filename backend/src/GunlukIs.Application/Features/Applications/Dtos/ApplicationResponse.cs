@@ -6,6 +6,7 @@ public record ApplicationResponse(
     Guid Id,
     Guid JobAdvertisementId,
     string JobTitle,
+    DateTime JobDate,
     Guid WorkerId,
     string WorkerName,
     string WorkerPhone,

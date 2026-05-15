@@ -47,11 +47,11 @@ export const Picker: React.FC<Props> = ({ label, value, options, placeholder = '
 const styles = StyleSheet.create({
   label: { fontSize: 14, color: colors.text, marginBottom: 6, fontWeight: '500' },
   field: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#F9FAFB',
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     paddingVertical: 14,
   },
   value: { color: colors.text, fontSize: 16 },

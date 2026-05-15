@@ -10,4 +10,5 @@ public record CreateJobRequest(
     TimeSpan EndTime,
     decimal Price,
     bool ProvidesFood,
-    bool ProvidesTransport);
+    bool ProvidesTransport,
+    int Quota);

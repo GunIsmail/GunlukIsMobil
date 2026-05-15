@@ -7,31 +7,41 @@ interface Props extends TextInputProps {
   error?: string;
 }
 
-export const Input: React.FC<Props> = ({ label, error, style, ...rest }) => (
-  <View style={styles.wrapper}>
-    {label ? <Text style={styles.label}>{label}</Text> : null}
-    <TextInput
-      placeholderTextColor={colors.textMuted}
-      style={[styles.input, error ? styles.errorBorder : null, style]}
-      {...rest}
-    />
-    {error ? <Text style={styles.errorText}>{error}</Text> : null}
-  </View>
+export const Input = React.forwardRef<TextInput, Props>(
+  ({ label, error, style, ...rest }, ref) => (
+    <View style={styles.wrapper}>
+      {label ? <Text style={styles.label}>{label.toUpperCase()}</Text> : null}
+      <TextInput
+        ref={ref}
+        placeholderTextColor={colors.muted}
+        style={[styles.input, error ? styles.errorBorder : null, style]}
+        {...rest}
+      />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  )
 );
+Input.displayName = 'Input';
 
 const styles = StyleSheet.create({
-  wrapper: { marginBottom: 12 },
-  label: { fontSize: 14, color: colors.text, marginBottom: 6, fontWeight: '500' },
+  wrapper: { marginBottom: 14 },
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primaryDeep,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text,
+    fontSize: 14,
+    color: colors.fg,
   },
   errorBorder: { borderColor: colors.danger },
-  errorText: { color: colors.danger, marginTop: 4, fontSize: 12 },
+  errorText: { color: colors.danger, marginTop: 4, fontSize: 11 },
 });

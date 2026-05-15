@@ -19,6 +19,8 @@ public class JobAdvertisement : BaseEntity
     public decimal Price { get; private set; }
     public bool ProvidesFood { get; private set; }
     public bool ProvidesTransport { get; private set; }
+    public int Quota { get; private set; }
+    public int ApplicantCount { get; private set; }
     public bool IsActive { get; private set; } = true;
 
     public ICollection<Application> Applications { get; private set; } = new List<Application>();
@@ -36,7 +38,8 @@ public class JobAdvertisement : BaseEntity
         TimeSpan endTime,
         decimal price,
         bool providesFood,
-        bool providesTransport)
+        bool providesTransport,
+        int quota)
     {
         EmployerId = employerId;
         Title = title;
@@ -49,11 +52,46 @@ public class JobAdvertisement : BaseEntity
         Price = price;
         ProvidesFood = providesFood;
         ProvidesTransport = providesTransport;
+        Quota = quota;
+        ApplicantCount = 0;
     }
 
     public void Deactivate()
     {
         IsActive = false;
+        SetUpdated();
+    }
+
+    public void IncrementApplicantCount()
+    {
+        ApplicantCount++;
+        SetUpdated();
+    }
+
+    public void Update(
+        string title,
+        string description,
+        string district,
+        string address,
+        DateTime jobDate,
+        TimeSpan startTime,
+        TimeSpan endTime,
+        decimal price,
+        bool providesFood,
+        bool providesTransport,
+        int quota)
+    {
+        Title = title;
+        Description = description;
+        District = district;
+        Address = address;
+        JobDate = DateTime.SpecifyKind(jobDate.Date, DateTimeKind.Utc);
+        StartTime = startTime;
+        EndTime = endTime;
+        Price = price;
+        ProvidesFood = providesFood;
+        ProvidesTransport = providesTransport;
+        Quota = quota;
         SetUpdated();
     }
 }

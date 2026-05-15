@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { JobCard } from '@/components/JobCard';
@@ -27,9 +28,11 @@ export const MyJobsScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   return (
     <Screen scrollable={false}>
@@ -44,7 +47,7 @@ export const MyJobsScreen: React.FC<Props> = ({ navigation }) => {
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
         renderItem={({ item }) => (
-          <JobCard job={item} onPress={() => navigation.navigate('Applicants', { jobId: item.id, title: item.title })} />
+          <JobCard job={item} onPress={() => navigation.navigate('Applicants', { job: item })} />
         )}
         ListEmptyComponent={<Text style={styles.empty}>Henüz hiç ilan yayınlamadınız.</Text>}
       />

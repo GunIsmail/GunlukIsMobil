@@ -14,5 +14,6 @@ public record JobResponse(
     decimal Price,
     bool ProvidesFood,
     bool ProvidesTransport,
+    int Quota,
     bool IsActive,
     DateTime CreatedAt);

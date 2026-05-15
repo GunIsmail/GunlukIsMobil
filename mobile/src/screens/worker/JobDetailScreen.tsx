@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Button } from '@/components/Button';
@@ -25,15 +26,20 @@ export const JobDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setJob(await jobsApi.getById(jobId));
-      } catch (err) {
-        Alert.alert('Hata', extractError(err));
-      }
-    })();
-  }, [jobId]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        try {
+          const data = await jobsApi.getById(jobId);
+          if (active) setJob(data);
+        } catch (err) {
+          if (active) Alert.alert('Hata', extractError(err));
+        }
+      })();
+      return () => { active = false; };
+    }, [jobId])
+  );
 
   const handleApply = async () => {
     if (!user) {

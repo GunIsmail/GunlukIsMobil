@@ -5,6 +5,7 @@ using GunlukIs.Application.Common.Security;
 using GunlukIs.Application.Common.Verification;
 using GunlukIs.Application.Features.Identity.Dtos;
 using GunlukIs.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace GunlukIs.Application.Features.Identity;
 
@@ -15,19 +16,22 @@ public class IdentityService : IIdentityService
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IEmailService _emailService;
     private readonly ISmsService _smsService;
+    private readonly ICurrentUserService _currentUser;
 
     public IdentityService(
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtTokenService,
         IEmailService emailService,
-        ISmsService smsService)
+        ISmsService smsService,
+        ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
         _emailService = emailService;
         _smsService = smsService;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
@@ -85,6 +89,43 @@ public class IdentityService : IIdentityService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success(BuildResponse(user, tokens));
+    }
+
+    public async Task<Result<ProfileResponse>> GetProfileAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsAuthenticated || _currentUser.UserId is null)
+            return Result.Failure<ProfileResponse>("Yetkisiz işlem.", 401);
+
+        var user = await _unitOfWork.Users.GetByIdAsync(_currentUser.UserId.Value, cancellationToken);
+        if (user is null)
+            return Result.Failure<ProfileResponse>("Kullanıcı bulunamadı.", 404);
+
+        return Result.Success(new ProfileResponse(user.Id, user.FullName, user.Email, user.PhoneNumber));
+    }
+
+    public async Task<Result<ProfileResponse>> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsAuthenticated || _currentUser.UserId is null)
+            return Result.Failure<ProfileResponse>("Yetkisiz işlem.", 401);
+
+        var user = await _unitOfWork.Users.GetByIdAsync(_currentUser.UserId.Value, cancellationToken);
+        if (user is null)
+            return Result.Failure<ProfileResponse>("Kullanıcı bulunamadı.", 404);
+
+        var emailLower = request.Email.Trim().ToLowerInvariant();
+
+        var conflict = await _unitOfWork.Users.Query()
+            .Where(u => u.Id != user.Id && (u.Email == emailLower || u.PhoneNumber == request.PhoneNumber))
+            .AnyAsync(cancellationToken);
+
+        if (conflict)
+            return Result.Failure<ProfileResponse>("Bu e-posta veya telefon başka bir hesaba ait.", 409);
+
+        user.UpdateProfile(request.FullName.Trim(), emailLower, request.PhoneNumber);
+        _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(new ProfileResponse(user.Id, user.FullName, user.Email, user.PhoneNumber));
     }
 
     private static Guid? ExtractUserIdFromExpiredToken(string accessToken)

@@ -37,7 +37,8 @@ public class JobService : IJobService
             request.EndTime,
             request.Price,
             request.ProvidesFood,
-            request.ProvidesTransport);
+            request.ProvidesTransport,
+            request.Quota);
 
         await _unitOfWork.Jobs.AddAsync(job, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -114,7 +115,7 @@ public class JobService : IJobService
         var employerId = _currentUser.UserId.Value;
         var items = await _unitOfWork.Jobs.Query()
             .Include(j => j.Employer)
-            .Where(j => j.EmployerId == employerId)
+            .Where(j => j.EmployerId == employerId && j.IsActive)
             .OrderByDescending(j => j.CreatedAt)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -125,12 +126,68 @@ public class JobService : IJobService
         return Result.Success(mapped);
     }
 
+    public async Task<Result<JobResponse>> UpdateAsync(Guid id, UpdateJobRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsAuthenticated || _currentUser.UserId is null)
+            return Result.Failure<JobResponse>("Yetkisiz işlem.", 401);
+        if (_currentUser.Role != UserRole.Employer)
+            return Result.Failure<JobResponse>("Yalnızca işverenler ilan düzenleyebilir.", 403);
+
+        var job = await _unitOfWork.Jobs.Query()
+            .Include(j => j.Employer)
+            .FirstOrDefaultAsync(j => j.Id == id, cancellationToken);
+
+        if (job is null || !job.IsActive)
+            return Result.Failure<JobResponse>("İlan bulunamadı.", 404);
+        if (job.EmployerId != _currentUser.UserId.Value)
+            return Result.Failure<JobResponse>("Bu ilan size ait değil.", 403);
+
+        job.Update(
+            request.Title.Trim(),
+            request.Description.Trim(),
+            request.District,
+            request.Address.Trim(),
+            request.JobDate,
+            request.StartTime,
+            request.EndTime,
+            request.Price,
+            request.ProvidesFood,
+            request.ProvidesTransport,
+            request.Quota);
+
+        _unitOfWork.Jobs.Update(job);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(ToResponse(job, job.Employer.FullName));
+    }
+
+    public async Task<Result> DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.IsAuthenticated || _currentUser.UserId is null)
+            return Result.Failure("Yetkisiz işlem.", 401);
+        if (_currentUser.Role != UserRole.Employer)
+            return Result.Failure("Yalnızca işverenler ilan kaldırabilir.", 403);
+
+        var job = await _unitOfWork.Jobs.GetByIdAsync(id, cancellationToken);
+
+        if (job is null || !job.IsActive)
+            return Result.Failure("İlan bulunamadı.", 404);
+        if (job.EmployerId != _currentUser.UserId.Value)
+            return Result.Failure("Bu ilan size ait değil.", 403);
+
+        job.Deactivate();
+        _unitOfWork.Jobs.Update(job);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+
     public IReadOnlyList<string> GetDistricts() => IstanbulDistricts.All;
 
     private static JobResponse ToResponse(JobAdvertisement j, string employerName) => new(
         j.Id, j.EmployerId, employerName,
         j.Title, j.Description, j.District, j.Address,
         j.JobDate, j.StartTime, j.EndTime,
-        j.Price, j.ProvidesFood, j.ProvidesTransport,
+        j.Price, j.ProvidesFood, j.ProvidesTransport, j.Quota,
         j.IsActive, j.CreatedAt);
 }

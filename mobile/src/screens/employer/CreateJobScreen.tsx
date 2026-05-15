@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { Alert, StyleSheet, Switch, Text, View, TextInput } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Input } from '@/components/Input';
 import { Picker } from '@/components/Picker';
@@ -9,8 +9,11 @@ import { jobsApi } from '@/api/jobsApi';
 import { extractError } from '@/api/http';
 import { colors } from '@/theme/colors';
 
+import type { JobAdvertisement } from '@/types/models';
+
 interface Props {
-  navigation: { goBack: () => void };
+  route: { params?: { job?: JobAdvertisement } };
+  navigation: { goBack: () => void; setOptions: (options: object) => void };
 }
 
 const pad = (n: number) => n.toString().padStart(2, '0');
@@ -23,24 +26,54 @@ const composeDateTime = (date: Date, time: Date): Date => {
   return out;
 };
 
-export const CreateJobScreen: React.FC<Props> = ({ navigation }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [district, setDistrict] = useState<string | undefined>();
+export const CreateJobScreen: React.FC<Props> = ({ route, navigation }) => {
+  const editJob = route.params?.job;
+  const isEditing = !!editJob;
+
+  const [title, setTitle] = useState(editJob?.title ?? '');
+  const [description, setDescription] = useState(editJob?.description ?? '');
+  const [district, setDistrict] = useState<string | undefined>(editJob?.district);
   const [districts, setDistricts] = useState<string[]>([]);
-  const [address, setAddress] = useState('');
-  const [jobDate, setJobDate] = useState<Date | null>(null);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
-  const [price, setPrice] = useState('');
-  const [providesFood, setProvidesFood] = useState(false);
-  const [providesTransport, setProvidesTransport] = useState(false);
+  const [address, setAddress] = useState(editJob?.address ?? '');
+  const [jobDate, setJobDate] = useState<Date | null>(editJob ? new Date(editJob.jobDate) : null);
+  
+  const [startTime, setStartTime] = useState<Date | null>(() => {
+    if (!editJob) return null;
+    const d = new Date();
+    const [h, m] = editJob.startTime.split(':');
+    d.setHours(Number(h), Number(m), 0, 0);
+    return d;
+  });
+  
+  const [endTime, setEndTime] = useState<Date | null>(() => {
+    if (!editJob) return null;
+    const d = new Date();
+    const [h, m] = editJob.endTime.split(':');
+    d.setHours(Number(h), Number(m), 0, 0);
+    return d;
+  });
+
+  const [price, setPrice] = useState(editJob?.price.toString() ?? '');
+  const [quota, setQuota] = useState(editJob?.quota?.toString() ?? '');
+  const [providesFood, setProvidesFood] = useState(editJob?.providesFood ?? false);
+  const [providesTransport, setProvidesTransport] = useState(editJob?.providesTransport ?? false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const descriptionRef = useRef<TextInput>(null);
+  const addressRef = useRef<TextInput>(null);
+  const priceRef = useRef<TextInput>(null);
+  const quotaRef = useRef<TextInput>(null);
 
   useEffect(() => {
     jobsApi.districts().then(setDistricts).catch((err) => Alert.alert('Hata', extractError(err)));
   }, []);
+
+  useEffect(() => {
+    if (isEditing) {
+      navigation.setOptions({ title: 'İlanı Düzenle' });
+    }
+  }, [isEditing, navigation]);
 
   const validate = (): boolean => {
     const next: Record<string, string> = {};
@@ -70,6 +103,9 @@ export const CreateJobScreen: React.FC<Props> = ({ navigation }) => {
     const priceNum = Number(price);
     if (!price || Number.isNaN(priceNum) || priceNum <= 0) next.price = 'Pozitif bir tutar giriniz.';
 
+    const quotaNum = Number(quota);
+    if (!quota || Number.isNaN(quotaNum) || quotaNum <= 0) next.quota = 'Kontenjan en az 1 olmalıdır.';
+
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -78,7 +114,7 @@ export const CreateJobScreen: React.FC<Props> = ({ navigation }) => {
     if (!validate()) return;
     setLoading(true);
     try {
-      await jobsApi.create({
+      const payload = {
         title: title.trim(),
         description: description.trim(),
         district: district!,
@@ -87,10 +123,18 @@ export const CreateJobScreen: React.FC<Props> = ({ navigation }) => {
         startTime: toIsoTime(startTime!),
         endTime: toIsoTime(endTime!),
         price: Number(price),
+        quota: Number(quota),
         providesFood,
         providesTransport,
-      });
-      Alert.alert('Yayınlandı', 'İlan oluşturuldu.', [{ text: 'Tamam', onPress: navigation.goBack }]);
+      };
+
+      if (isEditing) {
+        await jobsApi.update(editJob.id, payload);
+        Alert.alert('Güncellendi', 'İlan başarıyla güncellendi.', [{ text: 'Tamam', onPress: navigation.goBack }]);
+      } else {
+        await jobsApi.create(payload);
+        Alert.alert('Yayınlandı', 'İlan oluşturuldu.', [{ text: 'Tamam', onPress: navigation.goBack }]);
+      }
     } catch (err) {
       Alert.alert('Başarısız', extractError(err));
     } finally {
@@ -100,18 +144,36 @@ export const CreateJobScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <Screen>
-      <Text style={styles.title}>İlan oluştur</Text>
-      <Input label="Başlık" value={title} onChangeText={setTitle} error={errors.title} />
+      <Input 
+        label="Başlık" 
+        value={title} 
+        onChangeText={setTitle} 
+        error={errors.title} 
+        returnKeyType="next"
+        onSubmitEditing={() => descriptionRef.current?.focus()}
+        blurOnSubmit={false}
+      />
       <Input
         label="Açıklama"
         value={description}
         onChangeText={setDescription}
         error={errors.description}
         multiline
+        ref={descriptionRef}
+        blurOnSubmit={false}
       />
       <Picker label="İlçe" options={districts} value={district} onChange={setDistrict} placeholder="İlçe seçin" />
       {errors.district ? <Text style={styles.errorBelow}>{errors.district}</Text> : null}
-      <Input label="Adres" value={address} onChangeText={setAddress} error={errors.address} />
+      <Input 
+        label="Adres" 
+        value={address} 
+        onChangeText={setAddress} 
+        error={errors.address} 
+        ref={addressRef}
+        returnKeyType="next"
+        onSubmitEditing={() => priceRef.current?.focus()}
+        blurOnSubmit={false}
+      />
 
       <DateTimeField
         label="Tarih"
@@ -147,7 +209,27 @@ export const CreateJobScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      <Input label="Ücret (₺)" value={price} onChangeText={setPrice} keyboardType="numeric" error={errors.price} />
+      <Input 
+        label="Ücret (₺)" 
+        value={price} 
+        onChangeText={setPrice} 
+        keyboardType="numeric" 
+        error={errors.price} 
+        ref={priceRef}
+        returnKeyType="next"
+        onSubmitEditing={() => quotaRef.current?.focus()}
+      />
+
+      <Input 
+        label="Kontenjan (Kişi Sayısı)" 
+        value={quota} 
+        onChangeText={setQuota} 
+        keyboardType="numeric" 
+        error={errors.quota} 
+        ref={quotaRef}
+        returnKeyType="done"
+        onSubmitEditing={handleSubmit}
+      />
 
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>Yemek dahil</Text>
@@ -158,7 +240,7 @@ export const CreateJobScreen: React.FC<Props> = ({ navigation }) => {
         <Switch value={providesTransport} onValueChange={setProvidesTransport} />
       </View>
 
-      <Button title="Yayınla" onPress={handleSubmit} loading={loading} style={{ marginTop: 8 }} />
+      <Button title={isEditing ? "Güncelle" : "Yayınla"} onPress={handleSubmit} loading={loading} style={{ marginTop: 8 }} />
     </Screen>
   );
 };

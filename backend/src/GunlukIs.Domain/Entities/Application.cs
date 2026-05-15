@@ -16,6 +16,9 @@ public class Application : BaseEntity
 
     public ICollection<ChatMessage> ChatMessages { get; private set; } = new List<ChatMessage>();
 
+    public WorkerRating? WorkerRating { get; private set; }
+    public EmployerRating? EmployerRating { get; private set; }
+
     private Application() { }
 
     public Application(Guid jobAdvertisementId, Guid workerId, string? message)

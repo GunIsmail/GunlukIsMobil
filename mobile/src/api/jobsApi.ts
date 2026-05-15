@@ -39,8 +39,28 @@ export const jobsApi = {
     price: number;
     providesFood: boolean;
     providesTransport: boolean;
+    quota: number;
   }): Promise<JobAdvertisement> {
     const { data } = await http.post<JobAdvertisement>('/api/jobs', payload);
     return data;
+  },
+  async update(id: string, payload: {
+    title: string;
+    description: string;
+    district: string;
+    address: string;
+    jobDate: string;
+    startTime: string;
+    endTime: string;
+    price: number;
+    providesFood: boolean;
+    providesTransport: boolean;
+    quota: number;
+  }): Promise<JobAdvertisement> {
+    const { data } = await http.put<JobAdvertisement>(`/api/jobs/${id}`, payload);
+    return data;
+  },
+  async deactivate(id: string): Promise<void> {
+    await http.delete(`/api/jobs/${id}`);
   },
 };

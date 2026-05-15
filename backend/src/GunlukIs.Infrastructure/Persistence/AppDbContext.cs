@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<JobAdvertisement> JobAdvertisements => Set<JobAdvertisement>();
     public DbSet<DomainApplication> Applications => Set<DomainApplication>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<WorkerRating> WorkerRatings => Set<WorkerRating>();
+    public DbSet<EmployerRating> EmployerRatings => Set<EmployerRating>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
