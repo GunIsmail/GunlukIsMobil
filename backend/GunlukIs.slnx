@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GunlukIs.Application/GunlukIs.Application.csproj" />
+    <Project Path="src/GunlukIs.Domain/GunlukIs.Domain.csproj" />
+    <Project Path="src/GunlukIs.Infrastructure/GunlukIs.Infrastructure.csproj" />
+    <Project Path="src/GunlukIs.WebAPI/GunlukIs.WebAPI.csproj" />
+  </Folder>
+</Solution>
