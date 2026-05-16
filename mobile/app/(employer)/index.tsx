@@ -26,7 +26,10 @@ export default function MyJobsScreen() {
 
   const load = useCallback(async () => {
     try {
-      setItems(await jobsApi.listMine());
+      const all = await jobsApi.listMine();
+      const d = new Date();
+      const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      setItems(all.filter((j) => j.jobDate >= todayStr));
     } catch (err) {
       Alert.alert('Hata', extractError(err));
     }
@@ -79,8 +82,17 @@ export default function MyJobsScreen() {
             <View style={styles.cardTop}>
               <View style={{ flex: 1 }}>
                 <View style={styles.activePill}>
-                  <View style={styles.activeDot} />
-                  <Text style={styles.activeLabel}>AKTİF · YAYINDA</Text>
+                  {new Date(item.jobDate) < new Date(new Date().setHours(0,0,0,0)) ? (
+                    <>
+                      <View style={[styles.activeDot, { backgroundColor: colors.muted }]} />
+                      <Text style={[styles.activeLabel, { color: colors.muted }]}>TAMAMLANDI</Text>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.activeDot} />
+                      <Text style={styles.activeLabel}>AKTİF · YAYINDA</Text>
+                    </>
+                  )}
                 </View>
                 <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
                 <Text style={styles.cardMeta}>

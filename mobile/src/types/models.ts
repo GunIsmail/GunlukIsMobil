@@ -38,6 +38,13 @@ export interface JobAdvertisement {
   createdAt: string;
 }
 
+export interface EmployerRatingDetail {
+  workingConditions: number;
+  paymentReliability: number;
+  managementStyle: number;
+  comment?: string;
+}
+
 export interface JobApplication {
   id: string;
   jobAdvertisementId: string;
@@ -49,6 +56,8 @@ export interface JobApplication {
   message?: string;
   status: ApplicationStatus;
   createdAt: string;
+  hasRatedEmployer?: boolean;
+  employerRatingDetail?: EmployerRatingDetail;
 }
 
 export interface ChatMessage {

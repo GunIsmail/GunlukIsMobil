@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { colors } from '@/theme/colors';
 
@@ -15,12 +15,6 @@ interface Props {
   placeholder?: string;
 }
 
-const formatDate = (d: Date) =>
-  d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-const formatTime = (d: Date) =>
-  d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-
 export const DateTimeField: React.FC<Props> = ({
   label,
   mode,
@@ -28,12 +22,9 @@ export const DateTimeField: React.FC<Props> = ({
   onChange,
   minimumDate,
   error,
-  placeholder,
 }) => {
-  const [iosOpen, setIosOpen] = useState(false);
-
-  const open = () => {
-    if (Platform.OS === 'android') {
+  if (Platform.OS === 'android') {
+    const openAndroid = () => {
       DateTimePickerAndroid.open({
         value: value ?? new Date(),
         mode,
@@ -43,33 +34,44 @@ export const DateTimeField: React.FC<Props> = ({
           if (event.type === 'set' && selected) onChange(selected);
         },
       });
-    } else {
-      setIosOpen(true);
-    }
-  };
+    };
 
-  const display = value ? (mode === 'date' ? formatDate(value) : formatTime(value)) : (placeholder ?? 'Seçin');
+    const formatDate = (d: Date) =>
+      d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const formatTime = (d: Date) =>
+      d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
+    const display = value ? (mode === 'date' ? formatDate(value) : formatTime(value)) : 'Seçin';
+
+    return (
+      <View style={styles.wrapper}>
+        {label ? <Text style={styles.label}>{label}</Text> : null}
+        <Text onPress={openAndroid} style={[styles.field, error ? styles.errorBorder : null]}>
+          <Text style={value ? styles.value : styles.placeholder}>{display}</Text>
+        </Text>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
+    );
+  }
+
+  // iOS: display="compact" — native iOS picker, no Modal needed
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
-      <Pressable onPress={open} style={[styles.field, error ? styles.errorBorder : null]}>
-        <Text style={value ? styles.value : styles.placeholder}>{display}</Text>
-      </Pressable>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-      {Platform.OS === 'ios' && iosOpen ? (
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <View style={[styles.iosFieldWrap, error ? styles.errorBorder : null]}>
         <DateTimePicker
           value={value ?? new Date()}
           mode={mode}
-          display="spinner"
+          display="compact"
           minimumDate={minimumDate}
+          locale="tr-TR"
+          style={styles.iosPicker}
           onChange={(_, selected) => {
-            setIosOpen(false);
             if (selected) onChange(selected);
           }}
         />
-      ) : null}
+      </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -77,6 +79,7 @@ export const DateTimeField: React.FC<Props> = ({
 const styles = StyleSheet.create({
   wrapper: { marginBottom: 12 },
   label: { fontSize: 14, color: colors.text, marginBottom: 6, fontWeight: '500' },
+  // Android press target
   field: {
     backgroundColor: '#F9FAFB',
     borderColor: colors.border,
@@ -89,4 +92,17 @@ const styles = StyleSheet.create({
   placeholder: { color: colors.textMuted, fontSize: 16 },
   errorBorder: { borderColor: colors.danger },
   errorText: { color: colors.danger, marginTop: 4, fontSize: 12 },
+  // iOS compact wrapper
+  iosFieldWrap: {
+    backgroundColor: '#F9FAFB',
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: 'flex-start',
+  },
+  iosPicker: {
+    // compact picker kendi boyutunu belirler
+  },
 });

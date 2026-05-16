@@ -5,6 +5,7 @@ import {
   ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { applicationsApi } from '@/api/applicationsApi';
 import { jobsApi } from '@/api/jobsApi';
@@ -41,11 +42,23 @@ export default function ApplicantsScreen() {
   const [items, setItems] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('Hepsi');
+  const [ratedWorkerIds, setRatedWorkerIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setItems(await applicationsApi.listByJob(jobId));
+      const data = await applicationsApi.listByJob(jobId);
+      setItems(data);
+      const keys = data
+        .filter((a) => a.status === 'Accepted')
+        .map((a) => `rated_worker_${a.id}`);
+      if (keys.length > 0) {
+        const pairs = await AsyncStorage.multiGet(keys);
+        const rated = new Set(
+          pairs.filter(([, val]) => val !== null).map(([key]) => key.replace('rated_worker_', '')),
+        );
+        setRatedWorkerIds(rated);
+      }
     } catch (err) {
       Alert.alert('Hata', extractError(err));
     } finally {
@@ -194,18 +207,27 @@ export default function ApplicantsScreen() {
                     <Ionicons name="chatbubble-outline" size={16} color={colors.primaryDeep} />
                     <Text style={styles.chatBtnText}>Sohbeti aç</Text>
                   </Pressable>
-                  {new Date(job.jobDate) < new Date() ? (
-                    <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: '/rate',
-                          params: { type: 'worker', applicationId: item.id, targetName: item.workerName },
-                        })
-                      }
-                      style={({ pressed }) => [styles.rateBtn, pressed && { opacity: 0.8 }]}
-                    >
-                      <Text style={styles.rateBtnText}>★ Değerlendir</Text>
-                    </Pressable>
+                  {(() => {
+                    const [y, mo, d] = job.jobDate.split('-').map(Number);
+                    return new Date(y, mo - 1, d) <= new Date();
+                  })() ? (
+                    ratedWorkerIds.has(item.id) ? (
+                      <View style={[styles.rateBtn, styles.rateBtnDone]}>
+                        <Text style={styles.rateBtnDoneText}>✓ Değerlendirildi</Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() =>
+                          router.push({
+                            pathname: '/rate',
+                            params: { type: 'worker', applicationId: item.id, targetName: item.workerName },
+                          })
+                        }
+                        style={({ pressed }) => [styles.rateBtn, pressed && { opacity: 0.8 }]}
+                      >
+                        <Text style={styles.rateBtnText}>★ Değerlendir</Text>
+                      </Pressable>
+                    )
                   ) : null}
                 </View>
               ) : null}
@@ -329,6 +351,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fffbea',
   },
   rateBtnText: { fontSize: 13, fontWeight: '700', color: '#a07a00' },
+  rateBtnDone: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
+  },
+  rateBtnDoneText: { fontSize: 13, fontWeight: '700', color: colors.primaryDeep },
   deactivateBtn: {
     marginTop: 8, marginHorizontal: 0, paddingVertical: 13, borderRadius: 14,
     borderWidth: 1, borderColor: `${colors.danger}55`, alignItems: 'center',

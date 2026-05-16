@@ -176,37 +176,41 @@ export default function JobDetailScreen() {
           </View>
         </View>
 
-        {/* Application note input */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>BAŞVURU NOTU (OPSİYONEL)</Text>
-          <View style={styles.noteInput}>
-            <TextInput
-              value={message}
-              onChangeText={setMessage}
-              placeholder="Neden uygun olduğunuzu kısaca yazın..."
-              placeholderTextColor={colors.muted}
-              style={styles.noteText}
-              multiline
-            />
+        {/* Application note input - only for workers */}
+        {user?.role !== 'Employer' ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>BAŞVURU NOTU (OPSİYONEL)</Text>
+            <View style={styles.noteInput}>
+              <TextInput
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Neden uygun olduğunuzu kısaca yazın..."
+                placeholderTextColor={colors.muted}
+                style={styles.noteText}
+                multiline
+              />
+            </View>
           </View>
-        </View>
+        ) : null}
       </ScrollView>
 
-      {/* Sticky CTA */}
-      <View style={styles.cta}>
-        <Text style={styles.ctaHint}>Başvurunuz işverene anında iletilir</Text>
-        <Pressable
-          onPress={handleApply}
-          disabled={submitting}
-          style={({ pressed }) => [styles.ctaBtn, (pressed || submitting) && { opacity: 0.8 }]}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.ctaBtnText}>Hemen başvur →</Text>
-          )}
-        </Pressable>
-      </View>
+      {/* Sticky CTA - only for workers */}
+      {user?.role !== 'Employer' ? (
+        <View style={styles.cta}>
+          <Text style={styles.ctaHint}>Başvurunuz işverene anında iletilir</Text>
+          <Pressable
+            onPress={handleApply}
+            disabled={submitting}
+            style={({ pressed }) => [styles.ctaBtn, (pressed || submitting) && { opacity: 0.8 }]}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.ctaBtnText}>Hemen başvur →</Text>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }

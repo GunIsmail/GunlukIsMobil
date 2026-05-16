@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
-  Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView,
+  StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { ratingsApi } from '@/api/ratingsApi';
 import { extractError } from '@/api/http';
@@ -52,6 +54,7 @@ export default function RateScreen() {
     targetName: string;
   }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isWorker = type === 'worker';
 
   const [scores, setScores] = useState<Record<string, number>>({
@@ -83,6 +86,10 @@ export default function RateScreen() {
           teamwork: scores.teamwork,
           comment: comment.trim() || undefined,
         });
+        await AsyncStorage.setItem(
+          `rated_worker_${applicationId}`,
+          JSON.stringify({ ...scores, comment: comment.trim() }),
+        );
       } else {
         await ratingsApi.rateEmployer({
           applicationId: applicationId!,
@@ -91,6 +98,10 @@ export default function RateScreen() {
           managementStyle: scores.managementStyle,
           comment: comment.trim() || undefined,
         });
+        await AsyncStorage.setItem(
+          `rated_employer_${applicationId}`,
+          JSON.stringify({ ...scores, comment: comment.trim() }),
+        );
       }
       Alert.alert('Teşekkürler!', 'Değerlendirmeniz kaydedildi.', [
         { text: 'Tamam', onPress: router.back },
@@ -103,8 +114,9 @@ export default function RateScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Header */}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+
+      {/* 1. ADIM: Header'ı KeyboardAvoidingView dışına aldık. Artık hep sabit kalacak. */}
       <View style={styles.header}>
         <Pressable
           onPress={router.back}
@@ -116,70 +128,84 @@ export default function RateScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Hero */}
-        <View style={styles.hero}>
-          <View style={styles.heroAvatar}>
-            <Text style={styles.heroAvatarText}>
-              {(targetName ?? '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+      {/* 2. ADIM: KeyboardAvoidingView sadece kayan içeriği ve alt butonu sarıyor. */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Hero */}
+          <View style={styles.hero}>
+            <View style={styles.heroAvatar}>
+              <Text style={styles.heroAvatarText}>
+                {(targetName ?? '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+              </Text>
+            </View>
+            <Text style={styles.heroName}>{targetName}</Text>
+            <Text style={styles.heroSub}>
+              {isWorker ? 'Çalışan değerlendirmesi' : 'İşveren değerlendirmesi'}
             </Text>
           </View>
-          <Text style={styles.heroName}>{targetName}</Text>
-          <Text style={styles.heroSub}>
-            {isWorker ? 'Çalışan değerlendirmesi' : 'İşveren değerlendirmesi'}
-          </Text>
-        </View>
 
-        {/* Star ratings */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Kategoriler</Text>
-          {metrics.map((m) => (
-            <StarRow
-              key={m.key}
-              label={m.label}
-              value={scores[m.key]}
-              onChange={(v) => setScores((prev) => ({ ...prev, [m.key]: v }))}
+          {/* Star ratings */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Kategoriler</Text>
+            {metrics.map((m) => (
+              <StarRow
+                key={m.key}
+                label={m.label}
+                value={scores[m.key]}
+                onChange={(v) => setScores((prev) => ({ ...prev, [m.key]: v }))}
+              />
+            ))}
+          </View>
+
+          {/* Comment */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Yorum (isteğe bağlı)</Text>
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              placeholder="Deneyiminizi paylaşın…"
+              placeholderTextColor={colors.muted}
+              multiline
+              maxLength={500}
+              style={styles.commentInput}
             />
-          ))}
-        </View>
+            <Text style={styles.charCount}>{comment.length}/500</Text>
+          </View>
+        </ScrollView>
 
-        {/* Comment */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Yorum (isteğe bağlı)</Text>
-          <TextInput
-            value={comment}
-            onChangeText={setComment}
-            placeholder="Deneyiminizi paylaşın…"
-            placeholderTextColor={colors.muted}
-            multiline
-            maxLength={500}
-            style={styles.commentInput}
-          />
-          <Text style={styles.charCount}>{comment.length}/500</Text>
+        {/* Submit Butonu */}
+        <View style={[
+          styles.footer,
+          { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : 22 }
+        ]}>
+          <Pressable
+            onPress={handleSubmit}
+            disabled={submitting || !allFilled}
+            style={({ pressed }) => [
+              styles.submitBtn,
+              (!allFilled || submitting) && styles.submitBtnDisabled,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text style={styles.submitBtnText}>
+              {submitting ? 'Gönderiliyor…' : 'Değerlendirmeyi gönder'}
+            </Text>
+          </Pressable>
         </View>
-      </ScrollView>
-
-      {/* Submit */}
-      <View style={styles.footer}>
-        <Pressable
-          onPress={handleSubmit}
-          disabled={submitting || !allFilled}
-          style={({ pressed }) => [
-            styles.submitBtn,
-            (!allFilled || submitting) && styles.submitBtnDisabled,
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          <Text style={styles.submitBtnText}>
-            {submitting ? 'Gönderiliyor…' : 'Değerlendirmeyi gönder'}
-          </Text>
-        </Pressable>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   safe: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row',
@@ -192,7 +218,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '700', color: colors.fg },
-  scroll: { padding: 22, gap: 16, paddingBottom: 8 },
+  scroll: { padding: 22, gap: 16, paddingBottom: 40 },
   hero: { alignItems: 'center', paddingVertical: 10, gap: 8 },
   heroAvatar: {
     width: 68, height: 68, borderRadius: 34,

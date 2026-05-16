@@ -7,16 +7,20 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { jobsApi } from '@/api/jobsApi';
+import { applicationsApi } from '@/api/applicationsApi';
 import { extractError } from '@/api/http';
 import { DateTimeField } from '@/components/DateTimeField';
 import { JobCard } from '@/components/JobCard';
+import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme/colors';
 import type { JobAdvertisement } from '@/types/models';
 
 export default function JobFeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const user = useAuthStore((s) => s.user);
   const [allJobs, setAllJobs] = useState<JobAdvertisement[]>([]);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [districts, setDistricts] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -42,11 +46,18 @@ export default function JobFeedScreen() {
 
   const loadJobs = useCallback(async () => {
     try {
-      setAllJobs(await jobsApi.list({}));
+      const jobs = await jobsApi.list({});
+      setAllJobs(jobs);
+      if (user?.role === 'Worker') {
+        const applications = await applicationsApi.listMine();
+        setAppliedJobIds(new Set(applications.map((a) => a.jobAdvertisementId)));
+      } else {
+        setAppliedJobIds(new Set());
+      }
     } catch (err) {
       Alert.alert('Hata', extractError(err));
     }
-  }, []);
+  }, [user]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -57,7 +68,9 @@ export default function JobFeedScreen() {
   useFocusEffect(useCallback(() => { loadJobs(); }, [loadJobs]));
 
   const filteredJobs = useMemo(() => {
-    let result = allJobs;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    let result = allJobs.filter((j) => j.jobDate >= todayStr && !appliedJobIds.has(j.id));
     if (selectedDistricts.length > 0) {
       result = result.filter((j) => selectedDistricts.includes(j.district));
     }
@@ -115,8 +128,8 @@ export default function JobFeedScreen() {
     );
   };
 
-  const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const headerNow = new Date();
+  const timeStr = `${String(headerNow.getHours()).padStart(2, '0')}:${String(headerNow.getMinutes()).padStart(2, '0')}`;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
